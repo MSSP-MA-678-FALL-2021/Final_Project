@@ -1,0 +1,70 @@
+---
+title: "Report for Anime Data Analysis"
+author: "Zening Ye"
+date: "11/22/2021"
+output: 
+  pdf_document: 
+    latex_engine: lualatex
+header-includes: 
+  - \usepackage{setspace}\renewcommand{\baselinestretch}{1.5}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(plotly, ggplot2, tidyverse, rstanarm, knitr, kableExtra)
+# source("script/data_clean.R")
+# source("script/plot.R")
+# source("script/fitting.R")
+```
+\vspace{-0.8cm}
+# Abstract
+
+Anime has become more and more popular for the past 5 to 6 years. The original word "Anime" means a hand-drawn and computer animation originating from Japan. In Japanese and Japanese, the Anime includes all animated works, regardless of style or origin. There are plenty of Anime works in the world, such as Movie, Music, ONA, TV, etc. However, some Anime did not have more popularity than others, and they did not have more shows on TV or other. In this project, I will use the data from 2014 to 2017 to analyze the following questions: first, what source(s) of Anime affected the audience more in 2014 to 2017? Second, why did the Anime come up a lot in 2014 to 2017? Last but not least, what type(s) of Anime will be the mainstream in the future? The report has three aspects to illustrate the entire research: Introduction, Method and Result.
+
+# Introduction
+
+There are plenty of types, sources and genres in Anime, therefore there will be a lot of combinations whether in TV, Movie, OVA, etc. There are some variables I would like to use to fit the model, such as start day, types, genres, sources, rating, popularity and score. These variables might help me to get some direction for the questions I mentioned above. For instance, how the genres might affect the popularity of the source(manga, original, novel), how rating and score will affect the popularity as well. Furthermore, how will these variables influence the future mainstream of the Anime?
+
+Based on these factors, I would like to use multilevel models to illustrate how these factors affect the mainstream and popularity in single or multiple genres in the future.
+
+# Method
+## Data Processiong and Cleaning
+
+The data was came from [Kaggle: Anime dataset: ](https://www.kaggle.com/thunderz/anime-dataset). The dataset I have chosen was cleared, however, it was not good enough for me to move to the next steps. Therefore, I first tidy up the data. I removed the variables that I will not use for the analysis in this report such as title, title_english, synopsis, etc. Second, I renamed some columns for easy access in the future, such as arid_from to star_year. Since I’m focusing on the data from 2008 to 2020, I filtered the data from the original dataset and created a new dataset for exploratory data analysis, which might help to figure out the difference from two different timelines. After cleaning the datasets I will use for the further analysis is listed below:
+```{r echo=FALSE, message=FALSE}
+animate_data <- read_csv("data/anime_data.csv")
+df1 <- animate_data %>% relocate(title,.before = aired_from) %>% 
+  select(-c(title_english, mal_id, premiered, synopsis, studios)) %>% 
+  rename(year_sta = aired_from) %>% rename(year_end = aired_to)
+df2 <- df1 %>% filter(year_sta >= "2008-01-01")
+```
+
+| Column Name      | Description |
+| :--:              | :----- |
+| title             | Name of the Anime |
+| year_sta          | Date on Aired |
+| year_end          | Date end of Aired |
+| duration          | Duration of Each Episode in min and hour |
+| episode           | Number of Episodes |
+| genres            | Theme of the Anime |
+| popularity        | Famous Level |
+| rank              | Rank of the Anime |
+| rating            | Level of the Anime |
+| score             | Numerical Level for Anime |
+| scored_by         | Population of the rating |
+| source            | Category of the Anime |
+| status            | Either the Anime was finished or not |
+| type              | Type of the Anime |
+
+## Exploratory Data Analysis
+
+
+## Model Fitting
+```{r}
+# model_1 <- stan_lmer(popularity ~ score + rating + type + 
+# (1 + duration | popularity), data = df2, refresh = 0)
+```
+
+# Result
+
+# Appendix

@@ -1,6 +1,5 @@
 library(plotly)
 
-
 EDA_p <- function(cod){
   source("script/data clean.R")
   if (cod == 1) {
@@ -14,5 +13,5 @@ EDA_p <- function(cod){
 }
 
 # Demo 
-EDA_p(1)
-EDA_p(2)
+# EDA_p(1)
+# EDA_p(2)

@@ -1,7 +1,6 @@
 library(tidyverse)
 
 # data clean
-
 cleanData <- function(df) {
   animate_data <- read_csv("data/anime_data.csv")
   
@@ -19,6 +18,4 @@ cleanData <- function(df) {
     df2 <- df1 %>% filter(year_sta >= "2008-01-01")
   }
 }
-
-
 
