@@ -1,17 +1,40 @@
-library(plotly)
+library(ggplot2)
 
-EDA_p <- function(cod){
-  source("script/data clean.R")
-  if (cod == 1) {
-    plt1 <- plot_ly(data = df1, x = ~year_sta, y = ~source, color = ~type, type = "scatter")
-    return(plt1)
-  }
-  if (cod == 2) {
-    plt2 <- plot_ly(data = df2, x = ~year_sta, y = ~source, color = ~type, type = "scatter") 
-    return(plt2)
-  }
-}
 
-# Demo 
-# EDA_p(1)
-# EDA_p(2)
+# Plot the entire distribution in popularity and source of Anime
+total_plot <- ggplot(df,aes(source, log(popularity), fill = type)) + geom_bar(stat = "identity") + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90), 
+        panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Popularity and Sources Between 2008 to 2020", x = "Source", y = "Popularity") +
+  scale_fill_discrete(name = "Type")
+
+
+# Plot by difference subsets
+movie_plot <- ggplot(movie, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in Movie", y = "Frequency")
+
+music_plot <- ggplot(music, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in Music", y = "Frequency")
+
+ona_plot <- ggplot(ona, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in ONA", y = "Frequency")
+
+ova_plot <- ggplot(ova, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in OVA", y = "Frequency")
+
+special_plot <- ggplot(special, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in Special", y = "Frequency")
+
+tv_plot <- ggplot(tv, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source of Anime in TV", y = "Frequency")
+
+# set the layout for these plots

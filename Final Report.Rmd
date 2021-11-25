@@ -6,58 +6,129 @@ output:
   pdf_document: 
     latex_engine: lualatex
 header-includes: 
-  - \usepackage{setspace}\renewcommand{\baselinestretch}{1.5}
+  - \usepackage{setspace}\renewcommand{\baselinestretch}{1.0}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(plotly, ggplot2, tidyverse, rstanarm, knitr, kableExtra)
-# source("script/data_clean.R")
-# source("script/plot.R")
-# source("script/fitting.R")
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE)
+pacman::p_load(ggplot2, tidyverse, rstanarm, knitr, kableExtra, stringr, magrittr, gridExtra, lme4)
 ```
-\vspace{-0.8cm}
+
 # Abstract
 
-Anime has become more and more popular for the past 5 to 6 years. The original word "Anime" means a hand-drawn and computer animation originating from Japan. In Japanese and Japanese, the Anime includes all animated works, regardless of style or origin. There are plenty of Anime works in the world, such as Movie, Music, ONA, TV, etc. However, some Anime did not have more popularity than others, and they did not have more shows on TV or other. In this project, I will use the data from 2014 to 2017 to analyze the following questions: first, what source(s) of Anime affected the audience more in 2014 to 2017? Second, why did the Anime come up a lot in 2014 to 2017? Last but not least, what type(s) of Anime will be the mainstream in the future? The report has three aspects to illustrate the entire research: Introduction, Method and Result.
+In this project, I will use the data from 2014 to 2017 to analyze the following questions: first, what source(s) of Anime affected the audience more in 2014 to 2017? Second, why did the Anime come up a lot in 2014 to 2017? Last but not least, what type(s) of Anime will be the mainstream in the future? The group-level of this project will be the source of the Anime, there are 12 groups for the source. It is more reliable to fit the model. Last but not least, The report has three aspects to illustrate the entire research: Introduction, Method and Result.
 
 # Introduction
+
+Anime has become more and more popular for the past 5 to 6 years. The original word "Anime" means a hand-drawn and computer animation originating from Japan. In Japanese and Japanese, the Anime includes all animated works, regardless of style or origin. There are plenty of Anime works in the world, such as Movie, Music, ONA, TV, etc. However, some Anime did not have more popularity than others, and they did not have more shows on TV or other.
 
 There are plenty of types, sources and genres in Anime, therefore there will be a lot of combinations whether in TV, Movie, OVA, etc. There are some variables I would like to use to fit the model, such as start day, types, genres, sources, rating, popularity and score. These variables might help me to get some direction for the questions I mentioned above. For instance, how the genres might affect the popularity of the source(manga, original, novel), how rating and score will affect the popularity as well. Furthermore, how will these variables influence the future mainstream of the Anime?
 
 Based on these factors, I would like to use multilevel models to illustrate how these factors affect the mainstream and popularity in single or multiple genres in the future.
 
+
 # Method
+
 ## Data Processiong and Cleaning
 
 The data was came from [Kaggle: Anime dataset: ](https://www.kaggle.com/thunderz/anime-dataset). The dataset I have chosen was cleared, however, it was not good enough for me to move to the next steps. Therefore, I first tidy up the data. I removed the variables that I will not use for the analysis in this report such as title, title_english, synopsis, etc. Second, I renamed some columns for easy access in the future, such as arid_from to star_year. Since I’m focusing on the data from 2008 to 2020, I filtered the data from the original dataset and created a new dataset for exploratory data analysis, which might help to figure out the difference from two different timelines. After cleaning the datasets I will use for the further analysis is listed below:
-```{r echo=FALSE, message=FALSE}
-animate_data <- read_csv("data/anime_data.csv")
-df1 <- animate_data %>% relocate(title,.before = aired_from) %>% 
-  select(-c(title_english, mal_id, premiered, synopsis, studios)) %>% 
-  rename(year_sta = aired_from) %>% rename(year_end = aired_to)
-df2 <- df1 %>% filter(year_sta >= "2008-01-01")
-```
+```{r}
+# Function to clean the data 
+getData <- function(cod) {
+  animate_data <- read_csv("data/anime_data.csv")
+  df1 <- animate_data %>% relocate(title,.before = aired_from) %>% 
+    select(-c(title_english, mal_id, premiered, synopsis, studios, aired_to, episodes, status)) %>% 
+    rename(year_sta = aired_from)
+  df2 <- df1 %>% filter(year_sta >= "2008-01-01")
+  df2$genres <- str_replace(df2$genres, "\\[", "")
+  df2$genres <- str_replace(df2$genres, "\\]", "")
+  df2$genres <- str_replace(df2$genres, "\\,", "")
+  df2$genres <- str_trim(df2$genres)
+  df2$year_sta <- as.Date(df2$year_sta, format = "1984-01-01")
+  if(cod == 1) {
+    return(df1)
+  } else {return(df2)}
+}
 
-| Column Name      | Description |
+# More detail in cleaning
+df <- getData(2)
+df$year_sta <- str_replace_all(df$year_sta, "\\-", "\\/")
+df$year_sta <- as.Date(df$year_sta)
+movie <- df %>% filter(type == "Movie")
+tv <- df %>% filter(type == "TV")
+music <- df %>% filter(type == "Music")
+ona <- df %>% filter(type == "ONA")
+ova <- df %>% filter(type == "OVA")
+special <- df %>% filter(type == "Special")
+
+# Set up theme for EDA plot
+set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90), 
+        panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+```
+\vspace{1.0cm}
+| Column            | Description |
 | :--:              | :----- |
 | title             | Name of the Anime |
 | year_sta          | Date on Aired |
-| year_end          | Date end of Aired |
 | duration          | Duration of Each Episode in min and hour |
-| episode           | Number of Episodes |
 | genres            | Theme of the Anime |
 | popularity        | Famous Level |
 | rank              | Rank of the Anime |
-| rating            | Level of the Anime |
+| rating            | Level of the Anime, eg. PG-13, R, PG |
 | score             | Numerical Level for Anime |
 | scored_by         | Population of the rating |
 | source            | Category of the Anime |
-| status            | Either the Anime was finished or not |
 | type              | Type of the Anime |
+
 
 ## Exploratory Data Analysis
 
+As I mentioned above I will use the data from 2008 to 2020, since during this period, more and more Anime came up and the popularity, rating, and sources are dynamic. The plot below indicates the frequency of the Anime came up in 12 years. Since the popularity level is a large number shown on the dataset, I transferred it into popularity/10000, so that it might be easy to illustrate the entire level.
+```{r, fig.cap="Frequncy of Anime in 2008-2020", out.width= '80%', out.height= '70%', fig.align='center'}
+# Plot the entire distribution in popularity and source of Anime
+ggplot(df,aes(popularity/10000, source, fill = type)) + geom_bar(stat = "identity") + theme_bw() + 
+  theme(panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Popularity and Sources Between 2008 to 2020", x = "Popularity/10000", y = "Source") +
+  scale_fill_discrete(name = "Type")
+```
+*For Figure 1, it is obvious that the radio source of Anime is kept at a very low level during 2008 to 2020, and it is only shown on TV. However, if we move our vision into Original, Manga, and Unknown, under these sources, they have much higher popularity levels than other sources, especially for the Original. *
+```{r, fig.cap="Frequency of Anime in Different Sources", fig.align='center', out.height='40%', out.width='90%'}
+# Plot by difference subsets
+movie_plot <- ggplot(movie, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in Movie", y = "Frequency")
+
+music_plot <- ggplot(music, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in Music", y = "Frequency")
+
+ona_plot <- ggplot(ona, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in ONA", y = "Frequency")
+
+ova_plot <- ggplot(ova, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in OVA", y = "Frequency")
+
+special_plot <- ggplot(special, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in Special", y = "Frequency")
+
+tv_plot <- ggplot(tv, aes(source, fill = source)) +
+  geom_bar() + set_theme + 
+  labs(title = "Source in TV", y = "Frequency")
+
+# set the layout for these plots
+grid.arrange(movie_plot, tv_plot, nrow = 1)
+```
+*For Figure 2, in order to show the distribution of Anime in different types,  I filtered the original dataset into six different subsets by different types. For instance, I used TV and Movie as examples to illustrate the frequency of source. Apparently, Original and Light Novels are the most famous in TV and Movie type. *
 
 ## Model Fitting
 ```{r}
