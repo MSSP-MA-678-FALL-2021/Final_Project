@@ -1,5 +1,5 @@
 ---
-title: "Report for Anime Data Analysis"
+title: "Anime Popularity Analysis"
 author: "Zening Ye"
 date: "11/22/2021"
 output: 
@@ -10,8 +10,8 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE)
-pacman::p_load(ggplot2, tidyverse, rstanarm, knitr, kableExtra, stringr, magrittr, gridExtra, lme4)
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, fig.align='center')
+pacman::p_load(ggplot2, tidyverse, rstanarm, knitr, kableExtra, stringr, magrittr, gridExtra, lme4, arm, car, lattice)
 ```
 
 # Abstract
@@ -36,8 +36,8 @@ The data was came from [Kaggle: Anime dataset: ](https://www.kaggle.com/thunderz
 # Function to clean the data 
 getData <- function(cod) {
   animate_data <- read_csv("data/anime_data.csv")
-  df1 <- animate_data %>% relocate(title,.before = aired_from) %>% 
-    select(-c(title_english, mal_id, premiered, synopsis, studios, aired_to, episodes, status)) %>% 
+  df1 <- animate_data %>% relocate(title,.before = aired_from)
+  df1 <- df1[,c(2,3,5,6,7,8,10,11,12,13,14,19)] %>% 
     rename(year_sta = aired_from)
   df2 <- df1 %>% filter(year_sta >= "2008-01-01")
   df2$genres <- str_replace(df2$genres, "\\[", "")
@@ -51,7 +51,7 @@ getData <- function(cod) {
 }
 
 # More detail in cleaning
-df <- getData(2)
+df <- getData(2) %>% filter(episodes <= 100)
 df$year_sta <- str_replace_all(df$year_sta, "\\-", "\\/")
 df$year_sta <- as.Date(df$year_sta)
 movie <- df %>% filter(type == "Movie")
@@ -75,6 +75,7 @@ set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90),
 | title             | Name of the Anime |
 | year_sta          | Date on Aired |
 | duration          | Duration of Each Episode in min and hour |
+| episodes          | Number of episodes in Anime
 | genres            | Theme of the Anime |
 | popularity        | Famous Level |
 | rank              | Rank of the Anime |
@@ -87,19 +88,27 @@ set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90),
 
 ## Exploratory Data Analysis
 
-As I mentioned above I will use the data from 2008 to 2020, since during this period, more and more Anime came up and the popularity, rating, and sources are dynamic. The plot below indicates the frequency of the Anime came up in 12 years. Since the popularity level is a large number shown on the dataset, I transferred it into popularity/10000, so that it might be easy to illustrate the entire level.
-```{r, fig.cap="Frequncy of Anime in 2008-2020", out.width= '80%', out.height= '70%', fig.align='center'}
+As I mentioned above I will use the data from 2008 to 2020, since during this period, more and more Anime came up, the popularity, rating, and sources are dynamic. The plot below indicates the frequency of the Anime came up in 12 years.
+```{r, fig.cap="Frequncy of Anime in 2008-2020", fig.height=4, fig.width= 10}
 # Plot the entire distribution in popularity and source of Anime
-ggplot(df,aes(popularity/10000, source, fill = type)) + geom_bar(stat = "identity") + theme_bw() + 
+t1 <- ggplot(df,aes(type, fill = type)) + geom_bar() + theme_bw() + 
+  theme(panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "none") +
+  labs(x = "Type", y = "Number of Anime")
+t2 <- ggplot(df, aes(episodes, fill = type)) + geom_bar() + theme_bw() + 
   theme(panel.grid = element_blank(), 
         panel.border = element_blank(),
         axis.line = element_line(colour = "black"),
         plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Popularity and Sources Between 2008 to 2020", x = "Popularity/10000", y = "Source") +
-  scale_fill_discrete(name = "Type")
+  scale_x_continuous(limits=c(0, 60), breaks = c(12, 24, 36, 48)) +
+  labs(x = "Episodes", y = "Frequency")
+grid.arrange(t1,t2, ncol = 2)
 ```
-*For Figure 1, it is obvious that the radio source of Anime is kept at a very low level during 2008 to 2020, and it is only shown on TV. However, if we move our vision into Original, Manga, and Unknown, under these sources, they have much higher popularity levels than other sources, especially for the Original. *
-```{r, fig.cap="Frequency of Anime in Different Sources", fig.align='center', out.height='40%', out.width='90%'}
+*For Figure 1, it is obvious to see the type of Anime in TV with episodes under 24 has more popularity and market share in 2008 to 2020. In addition, the second plot in Figure 1 basically represents the entire then entire stream type of Anime in these years.*
+```{r, fig.cap="Frequency of Anime in Different Sources", fig.height=4, fig.width= 10}
 # Plot by difference subsets
 movie_plot <- ggplot(movie, aes(source, fill = source)) +
   geom_bar() + set_theme + 
@@ -128,14 +137,54 @@ tv_plot <- ggplot(tv, aes(source, fill = source)) +
 # set the layout for these plots
 grid.arrange(movie_plot, tv_plot, nrow = 1)
 ```
-*For Figure 2, in order to show the distribution of Anime in different types,  I filtered the original dataset into six different subsets by different types. For instance, I used TV and Movie as examples to illustrate the frequency of source. Apparently, Original and Light Novels are the most famous in TV and Movie type. *
+*For Figure 2, in order to show the distribution of Anime in different types, I filtered the original dataset into six different subsets by different types. For instance, I used TV and Movie as examples to illustrate the frequency of source. Apparently, Original and Light Novels are the most famous topics in TV and Movie. *
 
 ## Model Fitting
-```{r}
-# model_1 <- stan_lmer(popularity ~ score + rating + type + 
-# (1 + duration | popularity), data = df2, refresh = 0)
+Before I fit the multilevel model, I would like to use the subset I made above to fit a glm model to check their relationship. Since TV and Movies are the most effective sources on Anime, it might help to visualize the relationship. The variables will include score, rating, source, and rank and duration and episodes. Since the popularity level might be too large for fitting the model, I use log(popularity) to fit the linear model.
+```{r, fig.height= 3.5, fig.width=6.5, fig.cap="Residual Plot"}
+model_1 <- stan_glm(log(popularity) ~ duration + rating + score + source + rank, data = movie, refresh = 0)
+model_2 <- stan_glm(log(popularity) ~ duration + rating + score + source + rank, data = tv, refresh = 0)
+pred_1 <- posterior_predict(model_1, draws = 1000)
+pred_2 <- posterior_predict(model_2, draws = 1000)
+par(mfrow=c(1,2))
+binnedplot(fitted(model_1), resid(model_1), main = "Movie")
+binnedplot(fitted(model_2), resid(model_2), main = "TV")
 ```
+For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | duration : genres)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. Furthermore the result of two fitted models shown below:
+$$
+\begin{aligned}
+log(popularity) = &16.430 - 0.082\cdot ratingNone- 0.019\cdot ratingPG - 0.419\cdot ratingPG13-0.434\cdot ratingR\\
+&-0.619\cdot {ratingR+} - 1.068\cdot score - 0.0001\cdot rank + n_j + \epsilon\\
+n_j \sim N(0,\sigma^2_a)
+\end{aligned}
+$$
+where $n_j$ is random effect: $duration:genres$
+
+$$
+\begin{aligned}
+log(popularity) = &14.62 - 0.465\cdot ratingNone- 0.022\cdot ratingPG-0.946\cdot ratingPG13 - 1.491\cdot ratingR \\ 
+&- 1.512\cdot {ratingR+} - 0.899\cdot score - 0.0004\cdot rank + n_j + \epsilon \\
+n_j \sim N(0,\sigma^2_a)
+\end{aligned}
+$$
+where $n_j$ is random effect: $duration:genres$
+
+```{r, fig.cap="Anime Type: Movie", fig.height=2}
+lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + (1 | duration:genres), data = movie)
+lmerp_1a <- plot(lmer_model_1,main ='Residuals vs Fitted')
+lmerp_2a <- qqmath(lmer_model_1,main='QQ Plot')
+grid.arrange(lmerp_1a, lmerp_2a, nrow = 1)
+```
+
+```{r, fig.cap="Type of Anime: TV", fig.height=2}
+lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + (1 | duration:genres), data = tv)
+lmerp_1b <- plot(lmer_model_2, main = 'Residuals vs Fitted')
+lmerp_2b <- qqmath(lmer_model_2,main='QQ Plot')
+grid.arrange(lmerp_1b, lmerp_2b, nrow = 1)
+```
+According to the residual analysis, even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution. 
 
 # Result
 
+\newpage
 # Appendix
