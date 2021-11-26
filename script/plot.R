@@ -2,15 +2,22 @@ library(ggplot2)
 
 
 # Plot the entire distribution in popularity and source of Anime
-total_plot <- ggplot(df,aes(source, log(popularity), fill = type)) + geom_bar(stat = "identity") + theme_bw() + 
-  theme(axis.text.x = element_text(angle = 90), 
-        panel.grid = element_blank(), 
+ggplot(df,aes(type, fill = type)) + geom_bar() + theme_bw() + 
+  theme(panel.grid = element_blank(), 
         panel.border = element_blank(),
         axis.line = element_line(colour = "black"),
-        plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Popularity and Sources Between 2008 to 2020", x = "Source", y = "Popularity") +
-  scale_fill_discrete(name = "Type")
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "none") +
+  labs(title = "Type of Anime Between 2008 to 2020", x = "Type", y = "Number of Anime")
 
+# total_plot <- ggplot(df,aes(source, log(popularity), fill = type)) + geom_bar(stat = "identity") + theme_bw() + 
+#   theme(axis.text.x = element_text(angle = 90), 
+#         panel.grid = element_blank(), 
+#         panel.border = element_blank(),
+#         axis.line = element_line(colour = "black"),
+#         plot.title = element_text(hjust = 0.5)) +
+#   labs(title = "Popularity and Sources Between 2008 to 2020", x = "Source", y = "Popularity") +
+#   scale_fill_discrete(name = "Type")
 
 # Plot by difference subsets
 movie_plot <- ggplot(movie, aes(source, fill = source)) +
