@@ -89,6 +89,7 @@ set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90),
 ## Exploratory Data Analysis
 
 As I mentioned above I will use the data from 2008 to 2020, since during this period, more and more Anime came up, the popularity, rating, and sources are dynamic. The plot below indicates the frequency of the Anime came up in 12 years.
+\vspace{-0.8cm}
 ```{r, fig.cap="Frequncy of Anime in 2008-2020", fig.height=4, fig.width= 10}
 # Plot the entire distribution in popularity and source of Anime
 t1 <- ggplot(df,aes(type, fill = type)) + geom_bar() + theme_bw() + 
@@ -107,28 +108,13 @@ t2 <- ggplot(df, aes(episodes, fill = type)) + geom_bar() + theme_bw() +
   labs(x = "Episodes", y = "Frequency")
 grid.arrange(t1,t2, ncol = 2)
 ```
+
 *For Figure 1, it is obvious to see the type of Anime in TV with episodes under 24 has more popularity and market share in 2008 to 2020. In addition, the second plot in Figure 1 basically represents the entire then entire stream type of Anime in these years.*
 ```{r, fig.cap="Frequency of Anime in Different Sources", fig.height=4, fig.width= 10}
 # Plot by difference subsets
 movie_plot <- ggplot(movie, aes(source, fill = source)) +
   geom_bar() + set_theme + 
   labs(title = "Source in Movie", y = "Frequency")
-
-music_plot <- ggplot(music, aes(source, fill = source)) +
-  geom_bar() + set_theme + 
-  labs(title = "Source in Music", y = "Frequency")
-
-ona_plot <- ggplot(ona, aes(source, fill = source)) +
-  geom_bar() + set_theme + 
-  labs(title = "Source in ONA", y = "Frequency")
-
-ova_plot <- ggplot(ova, aes(source, fill = source)) +
-  geom_bar() + set_theme + 
-  labs(title = "Source in OVA", y = "Frequency")
-
-special_plot <- ggplot(special, aes(source, fill = source)) +
-  geom_bar() + set_theme + 
-  labs(title = "Source in Special", y = "Frequency")
 
 tv_plot <- ggplot(tv, aes(source, fill = source)) +
   geom_bar() + set_theme + 
@@ -150,7 +136,7 @@ par(mfrow=c(1,2))
 binnedplot(fitted(model_1), resid(model_1), main = "Movie")
 binnedplot(fitted(model_2), resid(model_2), main = "TV")
 ```
-For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | duration : genres)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. Furthermore the result of two fitted models shown below:
+For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | source : genres)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. Furthermore the result of two fitted models shown below:
 $$
 \begin{aligned}
 log(popularity) = &16.430 - 0.082\cdot ratingNone- 0.019\cdot ratingPG - 0.419\cdot ratingPG13-0.434\cdot ratingR\\
@@ -158,7 +144,7 @@ log(popularity) = &16.430 - 0.082\cdot ratingNone- 0.019\cdot ratingPG - 0.419\c
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
-where $n_j$ is random effect: $duration:genres$
+where $n_j$ is random effect: $source:genres$
 
 $$
 \begin{aligned}
@@ -167,24 +153,106 @@ log(popularity) = &14.62 - 0.465\cdot ratingNone- 0.022\cdot ratingPG-0.946\cdot
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
-where $n_j$ is random effect: $duration:genres$
-
-```{r, fig.cap="Anime Type: Movie", fig.height=2}
-lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + (1 | duration:genres), data = movie)
+where $n_j$ is random effect: $source:genres$
+Therefore, we can interpret these two models by using, for instance, rating levels. For every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie. Same interpretation with TV, for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
+```{r, fig.cap="Type of Anime: Movie", fig.height=2}
+lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + (1 | source:genres), data = movie)
 lmerp_1a <- plot(lmer_model_1,main ='Residuals vs Fitted')
 lmerp_2a <- qqmath(lmer_model_1,main='QQ Plot')
 grid.arrange(lmerp_1a, lmerp_2a, nrow = 1)
 ```
 
 ```{r, fig.cap="Type of Anime: TV", fig.height=2}
-lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + (1 | duration:genres), data = tv)
+lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + (1 | source:genres), data = tv)
 lmerp_1b <- plot(lmer_model_2, main = 'Residuals vs Fitted')
 lmerp_2b <- qqmath(lmer_model_2,main='QQ Plot')
 grid.arrange(lmerp_1b, lmerp_2b, nrow = 1)
 ```
-According to the residual analysis, even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution. 
+According to the residual analysis, even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution.
 
 # Result
+Focusing on the model fitting and EDA I have done above, unfortunately, it is hard to identify the variables that might affect the popularity of Anime. In other words, these variables do not have a significant effect on the final results. Although I derived the Anime genre share from 2008 to 2020 from different subsets in figure 2, I still could not reach a valid conclusion. Moreover, I have analyzed rating and even though it has a significant effect in all variables, it has little effect on the overall model. The current result I have for two individual model is: 1) Movie: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie; 2) TV: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
+
+```{r}
+# plot(randef1, randef2)
+```
+
+# Discussion
+Overall the entire analysis was not good enough, even though the data looks good. The data I selected from Kaggle, I used rating, scour, rank as variables and source:genres as random effect for my multilevel model. Unfortunately, as I mentioned above it is unlikely to answer the questions I ask at the beginning of the report. After checking the model and data, I think there are some limitations for the data. First, the data provide the source level, which is helpful, I thought, for the model fitting. However, it did not provide the feedback of the user to indicate why it is so popular. Second, the variables I used might not be enough for model fitting, but the rest of variables were hard to fill in the lmer function. Last but not least, even though we have the count for type of Anime, we do not have actual market sale data for the Anime, including the type, rating, genres. This data might help to fit a better model in the future.  
+
+For the next step, I would like to collect the actual market data that I just mentioned, also I will try to include the market share data since it is more reasonable to indicate the popularity of Anime. In addition, I would like to learn more about modeling fitting and model design, because I realized I have lacked experience with designing a good model for data analysis. 
+
 
 \newpage
 # Appendix
+More EDA
+```{r, fig.cap="Original Dataset"}
+total <- getData(1)
+ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
+  theme(panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Anime Source", x = "Year", y = "Source")
+```
+
+```{r, fig.cap="Different Type of Anime", fig.height=8}
+# plot function: Type
+type_anime <- function(df) {
+  p <- ggplot({{df}}, aes(source, fill = source)) +
+  geom_bar() + set_theme
+  return(p)
+}
+
+music_plot <- type_anime(music) + labs(title = "Source in Music", y = "Frequency")
+ona_plot <- type_anime(ona) + labs(title = "Source in ONA", y = "Frequency")
+ova_plot <- type_anime(ova) + labs(title = "Source in OVA", y = "Frequency")
+special_plot <- type_anime(special) + labs(title = "Source in Special", y = "Frequency")
+
+grid.arrange(music_plot, ona_plot, special_plot, ova_plot, nrow = 2)
+```
+
+```{r, fig.cap="Rating Level",fig.height=8}
+# Filter different rate level
+rate1 <- df %>% filter(rating == "PG-13 - Teens 13 or older")
+rate2 <- df %>% filter(rating == "PG - Children")
+rate3 <- df %>% filter(rating == "G - All Ages")
+rate4 <- df %>% filter(rating == "Rx - Hentai")
+rate5 <- df %>% filter(rating == "R+ - Mild Nudity")
+rate6 <- df %>% filter(rating == "R - 17+ (violence & profanity)")
+rate7 <- df %>% filter(rating == "None")
+
+# set up theme for rate level plot
+set_theme_rate <- theme_bw() + 
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90),
+        legend.position = "none")
+  
+
+# plot function: Rating
+rate_anime <- function(df) {
+  p <- ggplot({{df}}, aes(type, fill = source)) +
+  geom_bar() + set_theme_rate + labs(y = "Frequency", x = "Type")
+  return(p)
+}
+
+r1 <- rate_anime(rate1) + labs(title = "PG-13 - Teens 13 or older")
+r2 <- rate_anime(rate2) + labs(title = "PG - Children")
+r3 <- rate_anime(rate3) + labs(title = "G_ All Age")
+r4 <- rate_anime(rate4) + labs(title = "Rx - Hentai")
+r5 <- rate_anime(rate5) + labs(title = "R+ - Mild Nudity")
+r6 <- rate_anime(rate6) + labs(title = "R - 17+ (violence & profanity)")
+r7 <- rate_anime(rate7) + labs(title = "None")
+
+grid.arrange(r1,r2,r3,r4,r5,r6,r7, nrow = 3)
+```
+\newpage
+Random Effect in Two Models:
+```{r}
+ranef(lmer_model_1) 
+ranef(lmer_model_2)
+```
+
