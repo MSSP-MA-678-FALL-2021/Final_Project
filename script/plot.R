@@ -45,3 +45,69 @@ tv_plot <- ggplot(tv, aes(source, fill = source)) +
   labs(title = "Source of Anime in TV", y = "Frequency")
 
 # set the layout for these plots
+
+
+
+################################################################################
+################################################################################
+# Appendix Plot
+# Total Dataset
+total <- getData(1)
+ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
+  theme(panel.grid = element_blank(), 
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Anime Source", x = "Year", y = "Source")
+
+####################################################################
+# plot function: Type
+type_anime <- function(df) {
+  p <- ggplot({{df}}, aes(source, fill = source)) +
+    geom_bar() + set_theme
+  return(p)
+}
+
+music_plot <- type_anime(music) + labs(title = "Source in Music", y = "Frequency")
+ona_plot <- type_anime(ona) + labs(title = "Source in ONA", y = "Frequency")
+ova_plot <- type_anime(ova) + labs(title = "Source in OVA", y = "Frequency")
+special_plot <- type_anime(special) + labs(title = "Source in Special", y = "Frequency")
+
+grid.arrange(music_plot, ona_plot, special_plot, ova_plot, nrow = 2)
+
+####################################################################
+# Filter different rate level
+rate1 <- df %>% filter(rating == "PG-13 - Teens 13 or older")
+rate2 <- df %>% filter(rating == "PG - Children")
+rate3 <- df %>% filter(rating == "G - All Ages")
+rate4 <- df %>% filter(rating == "Rx - Hentai")
+rate5 <- df %>% filter(rating == "R+ - Mild Nudity")
+rate6 <- df %>% filter(rating == "R - 17+ (violence & profanity)")
+rate7 <- df %>% filter(rating == "None")
+
+# set up theme for rate level plot
+set_theme_rate <- theme_bw() + 
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90),
+        legend.position = "none")
+
+
+# plot function: Rating
+rate_anime <- function(df) {
+  p <- ggplot({{df}}, aes(type, fill = source)) +
+    geom_bar() + set_theme_rate + labs(y = "Frequency", x = "Type")
+  return(p)
+}
+
+r1 <- rate_anime(rate1) + labs(title = "PG-13 - Teens 13 or older")
+r2 <- rate_anime(rate2) + labs(title = "PG - Children")
+r3 <- rate_anime(rate3) + labs(title = "G_ All Age")
+r4 <- rate_anime(rate4) + labs(title = "Rx - Hentai")
+r5 <- rate_anime(rate5) + labs(title = "R+ - Mild Nudity")
+r6 <- rate_anime(rate6) + labs(title = "R - 17+ (violence & profanity)")
+r7 <- rate_anime(rate7) + labs(title = "None")
+
+grid.arrange(r1,r2,r3,r4,r5,r6,r7, nrow = 3)
