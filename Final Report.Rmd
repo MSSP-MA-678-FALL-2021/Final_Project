@@ -128,42 +128,44 @@ grid.arrange(movie_plot, tv_plot, nrow = 1)
 ## Model Fitting
 Before I fit the multilevel model, I would like to use the subset I made above to fit a glm model to check their relationship. Since TV and Movies are the most effective sources on Anime, it might help to visualize the relationship. The variables will include score, rating, source, and rank and duration and episodes. Since the popularity level might be too large for fitting the model, I use log(popularity) to fit the linear model.
 ```{r, fig.height= 3.5, fig.width=6.5, fig.cap="Residual Plot"}
-model_1 <- stan_glm(log(popularity) ~ duration + rating + score + source + rank, data = movie, refresh = 0)
-model_2 <- stan_glm(log(popularity) ~ duration + rating + score + source + rank, data = tv, refresh = 0)
-pred_1 <- posterior_predict(model_1, draws = 1000)
-pred_2 <- posterior_predict(model_2, draws = 1000)
+model_1 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = movie, refresh = 0)
+model_2 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = tv, refresh = 0)
+# pred_1 <- posterior_predict(model_1, draws = 1000)
+# pred_2 <- posterior_predict(model_2, draws = 1000)
 par(mfrow=c(1,2))
-binnedplot(fitted(model_1), resid(model_1), main = "Movie")
-binnedplot(fitted(model_2), resid(model_2), main = "TV")
+plot(fitted(model_1), resid(model_1), main = "Movie")
+plot(fitted(model_2), resid(model_2), main = "TV")
 ```
-For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | source : genres)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. Furthermore the result of two fitted models shown below:
+For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | rating : episodes)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. The two multilevel models can be written as follow:
 $$
 \begin{aligned}
-log(popularity) = &16.430 - 0.082\cdot ratingNone- 0.019\cdot ratingPG - 0.419\cdot ratingPG13-0.434\cdot ratingR\\
-&-0.619\cdot {ratingR+} - 1.068\cdot score - 0.0001\cdot rank + n_j + \epsilon\\
+log(popularity) = &15.95 + 1.198\cdot ratingNone + 0.979\cdot ratingPG + 2.476\cdot ratingPG13 + 1.215\cdot ratingR\\
+& -0.935\cdot {ratingR+} - 0.97\cdot score - 0.0001\cdot rank + 0.195 \cdot ratingNone:score + 0.145 \cdot ratingPG:score\\
+& 0.397 \cdot ratingPG-13:score + 0.219 \cdot ratingR:score + 0.017 \cdot ratingR+:score + +n_j + \epsilon\\
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
-where $n_j$ is random effect: $source:genres$
+where $n_j$ is random effect: $rating:episodes$
 
 $$
 \begin{aligned}
-log(popularity) = &14.62 - 0.465\cdot ratingNone- 0.022\cdot ratingPG-0.946\cdot ratingPG13 - 1.491\cdot ratingR \\ 
-&- 1.512\cdot {ratingR+} - 0.899\cdot score - 0.0004\cdot rank + n_j + \epsilon \\
+log(popularity) = &12.67 - 2.891\cdot ratingNone - 1.796\cdot ratingPG + 1.022\cdot ratingPG13 + 1.077\cdot ratingR\\
+& -0.317\cdot {ratingR+} - 0.614\cdot score - 0.0001\cdot rank + 0.382 \cdot ratingNone:score + 0.274 \cdot ratingPG:score\\
+& 0.263 \cdot ratingPG-13:score + 0.369 \cdot ratingR:score + 0.174 \cdot ratingR+:score + +n_j + \epsilon\\
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
-where $n_j$ is random effect: $source:genres$
+where $n_j$ is random effect: $rating:episodes$  
 Therefore, we can interpret these two models by using, for instance, rating levels. For every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie. Same interpretation with TV, for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
 ```{r, fig.cap="Type of Anime: Movie", fig.height=2}
-lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + (1 | source:genres), data = movie)
+lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating:episodes), data = movie)
 lmerp_1a <- plot(lmer_model_1,main ='Residuals vs Fitted')
 lmerp_2a <- qqmath(lmer_model_1,main='QQ Plot')
 grid.arrange(lmerp_1a, lmerp_2a, nrow = 1)
 ```
 
 ```{r, fig.cap="Type of Anime: TV", fig.height=2}
-lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + (1 | source:genres), data = tv)
+lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating:episodes), data = tv)
 lmerp_1b <- plot(lmer_model_2, main = 'Residuals vs Fitted')
 lmerp_2b <- qqmath(lmer_model_2,main='QQ Plot')
 grid.arrange(lmerp_1b, lmerp_2b, nrow = 1)
@@ -173,9 +175,6 @@ According to the residual analysis, even though I used two different subsets to 
 # Result
 Focusing on the model fitting and EDA I have done above, unfortunately, it is hard to identify the variables that might affect the popularity of Anime. In other words, these variables do not have a significant effect on the final results. Although I derived the Anime genre share from 2008 to 2020 from different subsets in figure 2, I still could not reach a valid conclusion. Moreover, I have analyzed rating and even though it has a significant effect in all variables, it has little effect on the overall model. The current result I have for two individual model is: 1) Movie: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie; 2) TV: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
 
-```{r}
-# plot(randef1, randef2)
-```
 
 # Discussion
 Overall the entire analysis was not good enough, even though the data looks good. The data I selected from Kaggle, I used rating, scour, rank as variables and source:genres as random effect for my multilevel model. Unfortunately, as I mentioned above it is unlikely to answer the questions I ask at the beginning of the report. After checking the model and data, I think there are some limitations for the data. First, the data provide the source level, which is helpful, I thought, for the model fitting. However, it did not provide the feedback of the user to indicate why it is so popular. Second, the variables I used might not be enough for model fitting, but the rest of variables were hard to fill in the lmer function. Last but not least, even though we have the count for type of Anime, we do not have actual market sale data for the Anime, including the type, rating, genres. This data might help to fit a better model in the future.  
@@ -249,10 +248,15 @@ r7 <- rate_anime(rate7) + labs(title = "None")
 
 grid.arrange(r1,r2,r3,r4,r5,r6,r7, nrow = 3)
 ```
-\newpage
+```{r}
+print(model_1)
+print(model_2)
+print(lmer_model_1)
+print(lmer_model_2)
+```
 Random Effect in Two Models:
 ```{r}
-ranef(lmer_model_1) 
+ranef(lmer_model_1)
 ranef(lmer_model_2)
 ```
 
