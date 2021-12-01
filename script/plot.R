@@ -111,3 +111,32 @@ r6 <- rate_anime(rate6) + labs(title = "R - 17+ (violence & profanity)")
 r7 <- rate_anime(rate7) + labs(title = "None")
 
 grid.arrange(r1,r2,r3,r4,r5,r6,r7, nrow = 3)
+
+
+# mean value of source
+mean <- df %>% group_by(source) %>% 
+  summarise(mean = mean(score))
+ggplot(mean) +geom_line(aes(source, sort(mean), group = 1)) + set_theme +
+  labs(title = "Mean Value of Source", x = "Source", y = "Mean")
+
+# random effect plot
+# rdf1 <- ranef(lmer_model_1)$`rating:episodes`
+# rdf2 <- ranef(lmer_model_2)$`rating:episodes`
+# 
+# rdf1$interaction<-rownames(rdf1)
+# colnames(rdf1)<-c('random effect','interaction')
+# rownames(rdf1)<-seq(1,dim(rdf1)[1])
+# rdf1.1 <- rdf1 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
+# rdfp1 <- ggplot(rdf1.1, aes(x = Rating,y = `random effect`, color = `Num`)) +
+#   geom_point() +
+#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=4,check_overlap = TRUE,show_guide  = F) +
+#   guides(label = FALSE )+labs(title='Movie',x='Rating')
+# 
+# rdf2$interaction<-rownames(rdf2)
+# colnames(rdf2)<-c('random effect','interaction')
+# rownames(rdf2)<-seq(1,dim(rdf2)[1])
+# rdf2.1 <- rdf2 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
+# rdfp2 <- ggplot(rdf2.1, aes(x = Rating,y = `random effect`, color = `Num`)) +
+#   geom_point() +
+#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=4,check_overlap = TRUE,show_guide  = F) +
+#   guides(label = FALSE )+labs(title='Movie',x='Rating')
