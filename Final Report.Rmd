@@ -126,7 +126,7 @@ grid.arrange(movie_plot, tv_plot, nrow = 1)
 *For Figure 2, in order to show the distribution of Anime in different types, I filtered the original dataset into six different subsets by different types. For instance, I used TV and Movie as examples to illustrate the frequency of source. Apparently, Original and Light Novels are the most famous topics in TV and Movie. *
 
 ## Model Fitting
-Before I fit the multilevel model, I would like to use the subset I made above to fit a glm model to check their relationship. Since TV and Movies are the most effective sources on Anime, it might help to visualize the relationship. The variables will include score, rating, source, and rank and duration and episodes. Since the popularity level might be too large for fitting the model, I use log(popularity) to fit the linear model.
+Before I fit the multilevel model, I would like to use the subset I made above to fit a glm model to check their relationship. Since TV and Movies are the most effective sources on Anime, it might help to visualize the relationship. The variables will include score, rating, source, and rank. Since the popularity level might be too large for fitting the model, I use log(popularity) to fit the linear model.
 ```{r, fig.height= 3.5, fig.width=6.5, fig.cap="Residual Plot"}
 model_1 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = movie, refresh = 0)
 model_2 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = tv, refresh = 0)
@@ -136,12 +136,13 @@ par(mfrow=c(1,2))
 plot(fitted(model_1), resid(model_1), main = "Movie")
 plot(fitted(model_2), resid(model_2), main = "TV")
 ```
-For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score and rank, for the random effect is $(1 | rating : episodes)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. The two multilevel models can be written as follow:
+For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score, rank, and $rating:score$, for the random effect is $(1 | rating : episodes)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. The two multilevel models can be written as follow:
 $$
 \begin{aligned}
 log(popularity) = &15.95 + 1.198\cdot ratingNone + 0.979\cdot ratingPG + 2.476\cdot ratingPG13 + 1.215\cdot ratingR\\
-& -0.935\cdot {ratingR+} - 0.97\cdot score - 0.0001\cdot rank + 0.195 \cdot ratingNone:score + 0.145 \cdot ratingPG:score\\
-& 0.397 \cdot ratingPG-13:score + 0.219 \cdot ratingR:score + 0.017 \cdot ratingR+:score + +n_j + \epsilon\\
+& -0.935\cdot {ratingR+} - 0.97\cdot score - 0.0001\cdot rank + 0.195 \cdot ratingNone:score\\
+& + 0.145 \cdot ratingPG:score - 0.397 \cdot ratingPG-13:score + 0.219 \cdot ratingR:score\\
+&+ 0.017 \cdot ratingR+:score + +n_j + \epsilon\\
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
@@ -150,8 +151,9 @@ where $n_j$ is random effect: $rating:episodes$
 $$
 \begin{aligned}
 log(popularity) = &12.67 - 2.891\cdot ratingNone - 1.796\cdot ratingPG + 1.022\cdot ratingPG13 + 1.077\cdot ratingR\\
-& -0.317\cdot {ratingR+} - 0.614\cdot score - 0.0001\cdot rank + 0.382 \cdot ratingNone:score + 0.274 \cdot ratingPG:score\\
-& 0.263 \cdot ratingPG-13:score + 0.369 \cdot ratingR:score + 0.174 \cdot ratingR+:score + +n_j + \epsilon\\
+& -0.317\cdot {ratingR+} - 0.614\cdot score - 0.0001\cdot rank + 0.382 \cdot ratingNone:score\\
+&+ 0.274 \cdot ratingPG:score -0.263 \cdot ratingPG-13:score + 0.369 \cdot ratingR:score\\
+&+ 0.174 \cdot ratingR+:score+n_j + \epsilon\\
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
@@ -172,6 +174,7 @@ grid.arrange(lmerp_1b, lmerp_2b, nrow = 1)
 ```
 According to the residual analysis, even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution.
 
+\newpage
 # Result
 Focusing on the model fitting and EDA I have done above, unfortunately, it is hard to identify the variables that might affect the popularity of Anime. In other words, these variables do not have a significant effect on the final results. Although I derived the Anime genre share from 2008 to 2020 from different subsets in figure 2, I still could not reach a valid conclusion. Moreover, I have analyzed rating and even though it has a significant effect in all variables, it has little effect on the overall model. The current result I have for two individual model is: 1) Movie: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie; 2) TV: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
 
@@ -185,7 +188,7 @@ For the next step, I would like to collect the actual market data that I just me
 \newpage
 # Appendix
 More EDA
-```{r, fig.cap="Original Dataset"}
+```{r, fig.cap="Original Dataset", fig.height= 4}
 total <- getData(1)
 ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
   theme(panel.grid = element_blank(), 
@@ -193,6 +196,13 @@ ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
         axis.line = element_line(colour = "black"),
         plot.title = element_text(hjust = 0.5)) +
   labs(title = "Anime Source", x = "Year", y = "Source")
+```
+
+```{r, fig.cap="Mean Value of Each Source", fig.height=4}
+mean <- df %>% group_by(source) %>% 
+  summarise(mean = mean(score))
+ggplot(mean) +geom_line(aes(source, sort(mean), group = 1)) + set_theme +
+  labs(title = "Mean Value of Source", x = "Source", y = "Mean")
 ```
 
 ```{r, fig.cap="Different Type of Anime", fig.height=8}
@@ -258,5 +268,33 @@ Random Effect in Two Models:
 ```{r}
 ranef(lmer_model_1)
 ranef(lmer_model_2)
+
+
+# Random Effect plot
+# rdf1 <- ranef(lmer_model_1)$`rating:episodes`
+# rdf2 <- ranef(lmer_model_2)$`rating:episodes`
+# 
+# rdf1$interaction<-rownames(rdf1)
+# colnames(rdf1)<-c('random effect','interaction')
+# rownames(rdf1)<-seq(1,dim(rdf1)[1])
+# rdf1.1 <- rdf1 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
+# 
+# rdf2$interaction<-rownames(rdf2)
+# colnames(rdf2)<-c('random effect','interaction')
+# rownames(rdf2)<-seq(1,dim(rdf2)[1])
+# rdf2.1 <- rdf2 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
+# 
+# 
+# rdfp1 <- ggplot(rdf1.1, aes(x = Rating,y = `random effect`, color = Rating)) +
+#   geom_point() +
+#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=3,check_overlap = TRUE,show_guide  = F) +
+#   guides(label = FALSE )+labs(title='Movie',x='Rating')
+# 
+# rdfp2 <- ggplot(rdf2.1, aes(x = Rating,y = `random effect`, color = Rating)) +
+#   geom_point() +
+#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=4,check_overlap = TRUE,show_guide  = F) +
+#   guides(label = FALSE )+labs(title='Movie',x='Rating')
+# 
+# grid.arrange(rdfp1, rdfp2, ncol = 1)
 ```
 
