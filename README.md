@@ -7,4 +7,5 @@
   - Nov. 25, 2021: Report.Rmd, fitting.R, plot.R Update
   - Nov. 26, 2021: Report.Rmd Update
   - Nov. 26, 2021: Report.Rmd, plot.R Update
-  - Nov. 28, 2021: Repor.Rmd Update
+  - Nov. 28, 2021: Report.Rmd Update
+  - Nov. 30, 2021: Report.Rmd, plot.R Update
