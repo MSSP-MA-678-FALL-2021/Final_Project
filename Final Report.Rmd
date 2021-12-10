@@ -223,14 +223,12 @@ ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
   labs(title = "Anime Source", x = "Year", y = "Source")
 ```
 
-
 ```{r, fig.cap="Mean Value of Each Source", fig.height=3.5}
 mean <- df %>% group_by(source) %>% 
   summarise(mean = mean(score))
 ggplot(mean) +geom_line(aes(source, sort(mean), group = 1)) + set_theme +
   labs(title = "Mean Value of Source", x = "Source", y = "Mean")
 ```
-
 
 ```{r, fig.cap="Different Type of Anime", fig.height=7}
 # plot function: Type
