@@ -11,20 +11,21 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, fig.align='center')
-pacman::p_load(ggplot2, tidyverse, rstanarm, knitr, kableExtra, stringr, magrittr, gridExtra, lme4, arm, car, lattice)
+pacman::p_load(ggplot2, tidyverse, rstanarm, knitr, kableExtra, stringr, magrittr, gridExtra, lme4, arm, car, lattice,sjPlot,sjmisc)
 ```
 
 # Abstract
 
-In this project, I will use the data from 2014 to 2017 to analyze the following questions: first, what source(s) of Anime affected the audience more in 2014 to 2017? Second, why did the Anime come up a lot in 2014 to 2017? Last but not least, what type(s) of Anime will be the mainstream in the future? The group-level of this project will be the source of the Anime, there are 12 groups for the source. It is more reliable to fit the model. Last but not least, The report has three aspects to illustrate the entire research: Introduction, Method and Result.
+In this project, I will use the data from 2014 to 2017 to analyze the following questions: first, what source(s) of Anime affected the audience more in 2014 to 2017? Second, why did the Anime come up a lot in 2014 to 2017? Last but not least, what type(s) of Anime will be the mainstream in the future? Therefore, I conducted a multilevel analysis for the data I have, and tried to provide a top Anime list under the result I got after the analysis. Based on the result, it is hard to identify these questions, since the model fitted was not good enough. In addition, I did not have users’ data to combine with Anime data, users’ data might help to identify several factors, such as the period of episode, favorite, etc. I also concluded some main aspects that might affect the popularity of Anime based on the current analysis result. Last but not least, as a Anime fan, I created a list of Anime for recommendation after this analysis. 
 
 # Introduction
 
-Anime has become more and more popular for the past 5 to 6 years. The original word "Anime" means a hand-drawn and computer animation originating from Japan. In Japanese and Japanese, the Anime includes all animated works, regardless of style or origin. There are plenty of Anime works in the world, such as Movie, Music, ONA, TV, etc. However, some Anime did not have more popularity than others, and they did not have more shows on TV or other.
+Anime has become more and more popular for the past 5 to 6 years. The original word "Anime" means a hand-drawn and computer animation originating from Japan. In Japan, the Anime includes all animated works, regardless of style or origin. There are plenty of Anime works in the world, such as Movie, Music, ONA, TV, etc. However, some Anime did not have more popularity than others, and they did not have more shows on TV or other.
 
 There are plenty of types, sources and genres in Anime, therefore there will be a lot of combinations whether in TV, Movie, OVA, etc. There are some variables I would like to use to fit the model, such as start day, types, genres, sources, rating, popularity and score. These variables might help me to get some direction for the questions I mentioned above. For instance, how the genres might affect the popularity of the source(manga, original, novel), how rating and score will affect the popularity as well. Furthermore, how will these variables influence the future mainstream of the Anime?
 
 Based on these factors, I would like to use multilevel models to illustrate how these factors affect the mainstream and popularity in single or multiple genres in the future.
+
 
 
 # Method
@@ -52,6 +53,7 @@ getData <- function(cod) {
 
 # More detail in cleaning
 df <- getData(2) %>% filter(episodes <= 100)
+df %<>% filter(!(rating %in% c("Rx - Hentai","R - 17+ (violence & profanity)", "R+ - Mild Nudity")))
 df$year_sta <- str_replace_all(df$year_sta, "\\-", "\\/")
 df$year_sta <- as.Date(df$year_sta)
 movie <- df %>% filter(type == "Movie")
@@ -69,9 +71,9 @@ set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90),
         plot.title = element_text(hjust = 0.5),
         legend.position = "none")
 ```
-\vspace{1.0cm}
+\vspace{0.5cm}
 | Column            | Description |
-| :--:              | :----- |
+| :----             | :----- |
 | title             | Name of the Anime |
 | year_sta          | Date on Aired |
 | duration          | Duration of Each Episode in min and hour |
@@ -89,7 +91,7 @@ set_theme <- theme_bw() + theme(axis.text.x = element_text(angle = 90),
 ## Exploratory Data Analysis
 
 As I mentioned above I will use the data from 2008 to 2020, since during this period, more and more Anime came up, the popularity, rating, and sources are dynamic. The plot below indicates the frequency of the Anime came up in 12 years.
-\vspace{-0.8cm}
+\vspace{0.5cm}
 ```{r, fig.cap="Frequncy of Anime in 2008-2020", fig.height=4, fig.width= 10}
 # Plot the entire distribution in popularity and source of Anime
 t1 <- ggplot(df,aes(type, fill = type)) + geom_bar() + theme_bw() + 
@@ -127,67 +129,90 @@ grid.arrange(movie_plot, tv_plot, nrow = 1)
 
 ## Model Fitting
 Before I fit the multilevel model, I would like to use the subset I made above to fit a glm model to check their relationship. Since TV and Movies are the most effective sources on Anime, it might help to visualize the relationship. The variables will include score, rating, source, and rank. Since the popularity level might be too large for fitting the model, I use log(popularity) to fit the linear model.
-```{r, fig.height= 3.5, fig.width=6.5, fig.cap="Residual Plot"}
+```{r}
 model_1 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = movie, refresh = 0)
 model_2 <- stan_glm(log(popularity) ~ rating + score + source + rank, data = tv, refresh = 0)
 # pred_1 <- posterior_predict(model_1, draws = 1000)
 # pred_2 <- posterior_predict(model_2, draws = 1000)
-par(mfrow=c(1,2))
-plot(fitted(model_1), resid(model_1), main = "Movie")
-plot(fitted(model_2), resid(model_2), main = "TV")
 ```
-For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score, rank, and $rating:score$, for the random effect is $(1 | rating : episodes)$. I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. The two multilevel models can be written as follow:
-$$
-\begin{aligned}
-log(popularity) = &15.95 + 1.198\cdot ratingNone + 0.979\cdot ratingPG + 2.476\cdot ratingPG13 + 1.215\cdot ratingR\\
-& -0.935\cdot {ratingR+} - 0.97\cdot score - 0.0001\cdot rank + 0.195 \cdot ratingNone:score\\
-& + 0.145 \cdot ratingPG:score - 0.397 \cdot ratingPG-13:score + 0.219 \cdot ratingR:score\\
-&+ 0.017 \cdot ratingR+:score + +n_j + \epsilon\\
-n_j \sim N(0,\sigma^2_a)
-\end{aligned}
-$$
-where $n_j$ is random effect: $rating:episodes$
+
+For two two different subsets I fitted two different multilevel models, the variables I use for multilevel are rating, score, rank, and $rating:score$, for the random effect is $(1 | rating)$ and $(1 | source:type)$ . I also used two individual plots to check the model, “Residuals vs. Fitted” and “QQ Plot”. The two multilevel models can be written as follow:
+```{r}
+# Movie Section
+lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating) + (1 | source:type), data = movie)
+
+# TV Section
+lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating) + (1 | source:type), data = tv)
+```
 
 $$
 \begin{aligned}
-log(popularity) = &12.67 - 2.891\cdot ratingNone - 1.796\cdot ratingPG + 1.022\cdot ratingPG13 + 1.077\cdot ratingR\\
-& -0.317\cdot {ratingR+} - 0.614\cdot score - 0.0001\cdot rank + 0.382 \cdot ratingNone:score\\
-&+ 0.274 \cdot ratingPG:score -0.263 \cdot ratingPG-13:score + 0.369 \cdot ratingR:score\\
-&+ 0.174 \cdot ratingR+:score+n_j + \epsilon\\
+log(popularity) = &16.74 + 1.336\cdot ratingNone + 1.302\cdot ratingPG + 2.401\cdot ratingPG13\\
+& - 1.061\cdot score - 0.0002\cdot rank -0.219 \cdot ratingNone:score\\
+& -0.200 \cdot ratingPG:score - 0.415 \cdot ratingPG-13:score\\
+&+n_j + \epsilon\\
 n_j \sim N(0,\sigma^2_a)
 \end{aligned}
 $$
-where $n_j$ is random effect: $rating:episodes$  
-Therefore, we can interpret these two models by using, for instance, rating levels. For every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie. Same interpretation with TV, for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
-```{r, fig.cap="Type of Anime: Movie", fig.height=2}
-lmer_model_1 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating:episodes), data = movie)
-lmerp_1a <- plot(lmer_model_1,main ='Residuals vs Fitted')
-lmerp_2a <- qqmath(lmer_model_1,main='QQ Plot')
-grid.arrange(lmerp_1a, lmerp_2a, nrow = 1)
-```
+where $n_j$ and $i_j$ are random effects: $(1 | rating)$, $(1 | source:type)$ 
 
-```{r, fig.cap="Type of Anime: TV", fig.height=2}
-lmer_model_2 <- lmer(log(popularity) ~ rating + score + rank + rating:score + (1 | rating:episodes), data = tv)
-lmerp_1b <- plot(lmer_model_2, main = 'Residuals vs Fitted')
-lmerp_2b <- qqmath(lmer_model_2,main='QQ Plot')
-grid.arrange(lmerp_1b, lmerp_2b, nrow = 1)
-```
-According to the residual analysis, even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution.
+$$
+\begin{aligned}
+log(popularity) = &12.26 - 2.495\cdot ratingNone - 1.699\cdot ratingPG + 1.094\cdot ratingPG13\\
+& - 5.631\cdot score - 0.0001\cdot rank + 0.332 \cdot ratingNone:score\\
+&+ 0.265 \cdot ratingPG:score -0.283 \cdot ratingPG-13:score\\
+&+ n_j + \epsilon\\
+n_j \sim N(0,\sigma^2_a)
+\end{aligned}
+$$
+where $n_j$ and $i_j$ are random effects: $(1 | rating)$, $(1 | source:type)$ 
 
-\newpage
+Therefore, we can interpret these two models by using, for instance, rating levels. For every one unit change in ratingPG13, when other variables are constant, the log(popularity) will increase 2.401 in Movie. Same interpretation with TV, for every one unit change in ratingPG13, when other variables are constant, the log(popularity) will increase in 1.094.
+
+According to the residual analysis (under Appendix), even though I used two different subsets to fit the multilevel model, the “Residuals vs. Fitted” plots indicated that the residual is not good to fit the model, so it might conclude there is not a lot of correlation between the predictors. On the QQ plots, there are plenty of residual points not on the lines, so it might not follow the normal distribution.
+
 # Result
-Focusing on the model fitting and EDA I have done above, unfortunately, it is hard to identify the variables that might affect the popularity of Anime. In other words, these variables do not have a significant effect on the final results. Although I derived the Anime genre share from 2008 to 2020 from different subsets in figure 2, I still could not reach a valid conclusion. Moreover, I have analyzed rating and even though it has a significant effect in all variables, it has little effect on the overall model. The current result I have for two individual model is: 1) Movie: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase -0.169 in Movie; 2) TV: for every one unit change in ratingR+, when other variables are constant, the log(popularity) will increase in -1.512.
+Focusing on the model fitting and EDA I have done above, unfortunately, it is hard to identify the variables that might affect the popularity of Anime. In other words, these variables do not have a significant effect on the final results. Although I derived the Anime genre share from 2008 to 2020 from different subsets in figure 2, I still could not reach a valid conclusion. Moreover, I have analyzed rating and even though it has a significant effect in all variables, it has little effect on the overall model. The current result I have for two individual model is: 1) Movie: for every one unit change in ratingPG13, when other variables are constant, the log(popularity) will increase 2.401 in Movie; 2) TV: for every one unit change in ratingPG13, when other variables are constant, the log(popularity) will increase in 1.094. 
+Furthermore, I made a random effect plot to show how it will affect the model (Appendix). 
+ 
+The popularity of Anime was not affected by the current variables I have on my data frame, but also has other aspects that might impact the entire Anime. For instance, the sources of Anime have increased a lot in light novels and manga. After 2008, The resources for light novels are growing exponentially, more and more light novels are being animeized or a series of anime peripherals are appearing. Typical examples include Sword Art Online, The Pet Girl of Sakurasou, The Familiar of Zero, Hyouka, etc. The emergence of these light novels has brought about a huge shift in the entire Anime market, which was previously dominated by manga and originals. The light novels have impacted the original balance, making the Anime market more and more competitive and enriching the daily life of Anime fans. 
 
+Not only for the light novel source growing exponentially, but also for the original and manga source. Kyoto Animate, a great Anime company in the world, created plenty of great Anime for us, such as “Miss Kobayashi's Dragon Maid”, “Love, Chunibyo & Other Delusions”, and Nichijou, etc. I believe more and more light novels and manga will become mainstream in the future, even though it is hard to show under my analysis. Therefore, I created a list for recommendations to others if they want to get into Anime more.
+\vspace{0.35cm}
+
+| Anime Name                    | Type | Year |
+| :------                       | :----- | :----
+| The Pet Girl of Sakurasou     | Light Novel | 2008 |
+| Hyouka                        | Light Novel | 2011 |
+| Sword Art Online              | Light Novel | 2013 |
+| Seishun Buta Yarō             | Light Novel | 2019 |
+| My Youth Romantic Comedy Is Wrong, As I Expected  | Light Novel | 2011 |
+| Overload                      | Light Novel | 2012 |
+| Eromanga Sensei               | Light Novel | 2013 |
+| Miss Kobayashi's Dragon Maid  | Manga | 2013 |
+
+As you can see from the table, many of them are light novels which means it will become more and more famous in the future, and that is the reason why I enter the area of Anime. 
 
 # Discussion
 Overall the entire analysis was not good enough, even though the data looks good. The data I selected from Kaggle, I used rating, scour, rank as variables and source:genres as random effect for my multilevel model. Unfortunately, as I mentioned above it is unlikely to answer the questions I ask at the beginning of the report. After checking the model and data, I think there are some limitations for the data. First, the data provide the source level, which is helpful, I thought, for the model fitting. However, it did not provide the feedback of the user to indicate why it is so popular. Second, the variables I used might not be enough for model fitting, but the rest of variables were hard to fill in the lmer function. Last but not least, even though we have the count for type of Anime, we do not have actual market sale data for the Anime, including the type, rating, genres. This data might help to fit a better model in the future.  
 
 For the next step, I would like to collect the actual market data that I just mentioned, also I will try to include the market share data since it is more reasonable to indicate the popularity of Anime. In addition, I would like to learn more about modeling fitting and model design, because I realized I have lacked experience with designing a good model for data analysis. 
 
+# Reference:
+[Kaggle - Anime dataset: ](https://www.kaggle.com/thunderz/anime-dataset) https://www.kaggle.com/thunderz/anime-dataset
+
 
 \newpage
 # Appendix
-More EDA
+Liner Model fitting
+```{r,fig.cap="Residual Plot", fig.height=6.5}
+# move to appendix 
+par(mfrow = c(2,1))
+plot(fitted(model_1), resid(model_1), main = "Movie")
+plot(fitted(model_2), resid(model_2), main = "TV")
+```
+
+More EDA  
 ```{r, fig.cap="Original Dataset", fig.height= 4}
 total <- getData(1)
 ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
@@ -198,14 +223,16 @@ ggplot(total, aes(year_sta, source, color = type)) + geom_point() + theme_bw() +
   labs(title = "Anime Source", x = "Year", y = "Source")
 ```
 
-```{r, fig.cap="Mean Value of Each Source", fig.height=4}
+
+```{r, fig.cap="Mean Value of Each Source", fig.height=3.5}
 mean <- df %>% group_by(source) %>% 
   summarise(mean = mean(score))
 ggplot(mean) +geom_line(aes(source, sort(mean), group = 1)) + set_theme +
   labs(title = "Mean Value of Source", x = "Source", y = "Mean")
 ```
 
-```{r, fig.cap="Different Type of Anime", fig.height=8}
+
+```{r, fig.cap="Different Type of Anime", fig.height=7}
 # plot function: Type
 type_anime <- function(df) {
   p <- ggplot({{df}}, aes(source, fill = source)) +
@@ -221,14 +248,14 @@ special_plot <- type_anime(special) + labs(title = "Source in Special", y = "Fre
 grid.arrange(music_plot, ona_plot, special_plot, ova_plot, nrow = 2)
 ```
 
-```{r, fig.cap="Rating Level",fig.height=8}
+```{r, fig.cap="Rating Level",fig.height=7}
 # Filter different rate level
 rate1 <- df %>% filter(rating == "PG-13 - Teens 13 or older")
 rate2 <- df %>% filter(rating == "PG - Children")
 rate3 <- df %>% filter(rating == "G - All Ages")
-rate4 <- df %>% filter(rating == "Rx - Hentai")
-rate5 <- df %>% filter(rating == "R+ - Mild Nudity")
-rate6 <- df %>% filter(rating == "R - 17+ (violence & profanity)")
+# rate4 <- df %>% filter(rating == "Rx - Hentai")
+# rate5 <- df %>% filter(rating == "R+ - Mild Nudity")
+# rate6 <- df %>% filter(rating == "R - 17+ (violence & profanity)")
 rate7 <- df %>% filter(rating == "None")
 
 # set up theme for rate level plot
@@ -251,50 +278,48 @@ rate_anime <- function(df) {
 r1 <- rate_anime(rate1) + labs(title = "PG-13 - Teens 13 or older")
 r2 <- rate_anime(rate2) + labs(title = "PG - Children")
 r3 <- rate_anime(rate3) + labs(title = "G_ All Age")
-r4 <- rate_anime(rate4) + labs(title = "Rx - Hentai")
-r5 <- rate_anime(rate5) + labs(title = "R+ - Mild Nudity")
-r6 <- rate_anime(rate6) + labs(title = "R - 17+ (violence & profanity)")
+# r4 <- rate_anime(rate4) + labs(title = "Rx - Hentai")
+# r5 <- rate_anime(rate5) + labs(title = "R+ - Mild Nudity")
+# r6 <- rate_anime(rate6) + labs(title = "R - 17+ (violence & profanity)")
 r7 <- rate_anime(rate7) + labs(title = "None")
 
-grid.arrange(r1,r2,r3,r4,r5,r6,r7, nrow = 3)
+grid.arrange(r1,r2,r3,r7, nrow = 2)
 ```
+
+
+```{r, fig.cap="Type of Anime: Movie and TV",fig.height=4}
+# Movie Section
+lmerp_1a <- plot(lmer_model_1,main ='Residuals vs Fitted')
+lmerp_2a <- qqmath(lmer_model_1,main='QQ Plot')
+
+# TV Section
+lmerp_1b <- plot(lmer_model_2, main = 'Residuals vs Fitted')
+lmerp_2b <- qqmath(lmer_model_2,main='QQ Plot')
+grid.arrange(lmerp_1a, lmerp_2a, lmerp_1b, lmerp_2b, nrow = 2)
+```
+
+```{r, fig.align='center', fig.cap="Random Effect Plots", fig.height=4, fig.width=6}
+# Random Effect plot
+rdfp1 <- plot_model(lmer_model_1,show.values = TRUE, value.offset = .3,vline.color = "black") + theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5))
+rdfp2 <- plot_model(lmer_model_2,show.values = TRUE, value.offset = .3,vline.color = "black") + theme_bw() +
+  theme(panel.border = element_blank(),
+        axis.line = element_line(colour = "black"),
+        plot.title = element_text(hjust = 0.5))
+grid.arrange(rdfp1, rdfp2, ncol = 1)
+```
+
+\newpage
+Result for model fitting:
 ```{r}
 print(model_1)
 print(model_2)
 print(lmer_model_1)
 print(lmer_model_2)
-```
-Random Effect in Two Models:
-```{r}
 ranef(lmer_model_1)
 ranef(lmer_model_2)
-
-
-# Random Effect plot
-# rdf1 <- ranef(lmer_model_1)$`rating:episodes`
-# rdf2 <- ranef(lmer_model_2)$`rating:episodes`
-# 
-# rdf1$interaction<-rownames(rdf1)
-# colnames(rdf1)<-c('random effect','interaction')
-# rownames(rdf1)<-seq(1,dim(rdf1)[1])
-# rdf1.1 <- rdf1 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
-# 
-# rdf2$interaction<-rownames(rdf2)
-# colnames(rdf2)<-c('random effect','interaction')
-# rownames(rdf2)<-seq(1,dim(rdf2)[1])
-# rdf2.1 <- rdf2 %>% separate(interaction, into = c("Rating", "Num"), sep = ":")
-# 
-# 
-# rdfp1 <- ggplot(rdf1.1, aes(x = Rating,y = `random effect`, color = Rating)) +
-#   geom_point() +
-#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=3,check_overlap = TRUE,show_guide  = F) +
-#   guides(label = FALSE )+labs(title='Movie',x='Rating')
-# 
-# rdfp2 <- ggplot(rdf2.1, aes(x = Rating,y = `random effect`, color = Rating)) +
-#   geom_point() +
-#   geom_text(aes(label = round(`random effect`,2)),vjust = 1.5, hjust = 1.5,size=4,check_overlap = TRUE,show_guide  = F) +
-#   guides(label = FALSE )+labs(title='Movie',x='Rating')
-# 
-# grid.arrange(rdfp1, rdfp2, ncol = 1)
 ```
+
 
