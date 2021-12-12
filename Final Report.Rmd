@@ -150,8 +150,8 @@ $$
 log(popularity) = &16.74 + 1.336\cdot ratingNone + 1.302\cdot ratingPG + 2.401\cdot ratingPG13\\
 & - 1.061\cdot score - 0.0002\cdot rank -0.219 \cdot ratingNone:score\\
 & -0.200 \cdot ratingPG:score - 0.415 \cdot ratingPG-13:score\\
-&+n_j + \epsilon\\
-n_j \sim N(0,\sigma^2_a)
+&+n_j + i_j +\epsilon\\
+n_j \sim N(0,\sigma^2_a), i_j \sim N(0,\sigma^2_b)
 \end{aligned}
 $$
 where $n_j$ and $i_j$ are random effects: $(1 | rating)$, $(1 | source:type)$ 
@@ -161,8 +161,8 @@ $$
 log(popularity) = &12.26 - 2.495\cdot ratingNone - 1.699\cdot ratingPG + 1.094\cdot ratingPG13\\
 & - 5.631\cdot score - 0.0001\cdot rank + 0.332 \cdot ratingNone:score\\
 &+ 0.265 \cdot ratingPG:score -0.283 \cdot ratingPG-13:score\\
-&+ n_j + \epsilon\\
-n_j \sim N(0,\sigma^2_a)
+&+ n_j + i_j + \epsilon\\
+n_j \sim N(0,\sigma^2_a), i_j \sim N(0,\sigma^2_b)
 \end{aligned}
 $$
 where $n_j$ and $i_j$ are random effects: $(1 | rating)$, $(1 | source:type)$ 
@@ -193,8 +193,9 @@ Not only for the light novel source growing exponentially, but also for the orig
 
 As you can see from the table, many of them are light novels which means it will become more and more famous in the future, and that is the reason why I enter the area of Anime. 
 
+\newpage
 # Discussion
-Overall the entire analysis was not good enough, even though the data looks good. The data I selected from Kaggle, I used rating, scour, rank as variables and source:genres as random effect for my multilevel model. Unfortunately, as I mentioned above it is unlikely to answer the questions I ask at the beginning of the report. After checking the model and data, I think there are some limitations for the data. First, the data provide the source level, which is helpful, I thought, for the model fitting. However, it did not provide the feedback of the user to indicate why it is so popular. Second, the variables I used might not be enough for model fitting, but the rest of variables were hard to fill in the lmer function. Last but not least, even though we have the count for type of Anime, we do not have actual market sale data for the Anime, including the type, rating, genres. This data might help to fit a better model in the future.  
+Overall, the entire analysis was not good enough, even though the data looks good. The data I selected from Kaggle, I used rating, scour, rank as variables and source:genres as random effect for my multilevel model. Unfortunately, as I mentioned above it is unlikely to answer the questions I ask at the beginning of the report. After checking the model and data, I think there are some limitations for the data. First, the data provide the source level, which is helpful, I thought, for the model fitting. However, it did not provide the feedback of the user to indicate why it is so popular. Second, the variables I used might not be enough for model fitting, but the rest of variables were hard to fill in the lmer function. Last but not least, even though we have the count for type of Anime, we do not have actual market sale data for the Anime, including the type, rating, genres. This data might help to fit a better model in the future.  
 
 For the next step, I would like to collect the actual market data that I just mentioned, also I will try to include the market share data since it is more reasonable to indicate the popularity of Anime. In addition, I would like to learn more about modeling fitting and model design, because I realized I have lacked experience with designing a good model for data analysis. 
 
